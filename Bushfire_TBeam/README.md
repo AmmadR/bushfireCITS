@@ -1,15 +1,27 @@
-## TTGO T-Beam Tracker for The Things Network
+## Bushfire Early Warning IoT Device Using T-Beam
 
-Current version: 1.2.3
+Based on TTGO T-Beam Tracker for The Things Network (1.2.3) by kizniche.
 
-Uploads GPS data from the TTGO T-Beam to [The Things Network](https://www.thethingsnetwork.org) (TTN) and [TTN Mapper](https://ttnmapper.org) for tracking and determining signal strength of LoRaWAN gateways and nodes.
+### Version 0.1 Update 27/09
 
-#### Based on the code from [xoseperez/ttgo-beam-tracker](https://github.com/xoseperez/ttgo-beam-tracker), with excerpts from [dermatthias/Lora-TTNMapper-T-Beam](https://github.com/dermatthias/Lora-TTNMapper-T-Beam) to fix an issue with incorrect GPS data being transmitted to The Things Network. I also added support for the 915 MHz frequency (North and South America). [lewisxhe/TTGO-T-Beam](https://github.com/lewisxhe/TTGO-T-Beam) was referenced for enabling use on the newer T-Beam board (Rev1).
+Functionality added:
+•	Time 
+•	Continues to send after one (selected every 30s right now).
+•	Will continue to send data after disconnecting when uploaded.
+•	Flag whether the coordinates sending is valid (i.e., the hdop isnt so great that it's obvious there is no correct data).
 
-This is a LoRaWAN node based on the [TTGO T-Beam](https://github.com/LilyGO/TTGO-T-Beam) development platform using the SSD1306 I2C OLED display.
-It uses a RFM95 by HopeRF and the MCCI LoRaWAN LMIC stack. This sample code is configured to connect to The Things Network using the US 915 MHz frequency by default, but can be changed to EU 868 MHz.
+Removed:
+•	OTAA Functionality
+•	Screen functionality
+•	Changed the radio to false in configurations.
+•	Probably some other stuff I can’t remember rn.
+Lingering Questions:
+•	Should be able to get rid of payload cayenne.
+•	Does it send the last gps coordinate over and over again?
+•	It sometimes transmits the wrong info, is it still doing this?
+•	Validity of co-ordinates send only assessed at serial monitor, no flag raised at payload on ttn.
 
-NOTE: There are now 2 versions of the TTGO T-BEAM, the first version (Rev0) and a newer version (Rev1). The GPS module on Rev1 is connected to different pins than Rev0. This code has been successfully tested on REV0, and is in the process of being tested on REV1. See the end of this README for photos of eah board.
+
 
 ### Setup
 
@@ -26,9 +38,9 @@ The preferred method to install this library is via [PlatformIO](https://platfor
 
 3. Edit ```arduino-lmic/project_config/lmic_project_config.h``` and uncomment the proper frequency for your region.
 
-4. Edit this project file ```main/configuration.h``` and select your correct board revision, either T_BEAM_V07 or T_BEAM_V10 (see [T-BEAM Board Versions](#t-beam-board-versions) to determine which board revision you have).
+4. Also add this line ```#define hal_init LMICHAL_init``` so there isnt any clashes between libraries.
 
-5. Edit this project file ```main/credentials.h``` to use either ```USE_ABP``` or ```USE_OTAA``` and add the Keys/EUIs for your Application's Device from The Things Network.
+5. Create a TTN network key and update to ```credentials.h```
 
 6. Add the TTN Mapper integration to your Application (and optionally the Data Storage integration if you want to access the GPS location information yourself or use [TTN Tracker](#ttn-tracker), then add the Decoder code:
 
@@ -42,15 +54,22 @@ function Decoder(bytes, port) {
     decoded.longitude = ((bytes[3]<<16)>>>0) + ((bytes[4]<<8)>>>0) + bytes[5];
     decoded.longitude = (decoded.longitude / 16777215.0 * 360) - 180;
 
-    var altValue = ((bytes[6]<<8)>>>0) + bytes[7];
-    var sign = bytes[6] & (1 << 7);
-    if(sign) decoded.altitude = 0xFFFF0000 | altValue;
-    else decoded.altitude = altValue;
+    // HDOP scaled down to ensure small payload size
+    decoded.hdop = bytes[6] / 10.0;
+    
+    decoded.sats = bytes[7];
 
-    decoded.hdop = bytes[8] / 10.0;
-    decoded.sats = bytes[9];
-
-    return decoded;
+    var timeBytes = bytes.slice(8, bytes.length);
+    decoded.time = String.fromCharCode.apply(null, timeBytes).replace(/\0+$/, '');
+    
+    /* For finding bytes length received
+    return {
+      length: bytes.length,
+      data: decoded
+    }
+    */
+    
+    return decoded
 }
 ```
 
@@ -58,12 +77,7 @@ function Decoder(bytes, port) {
 
 8. Turn on the device and once a GPS lock is acquired, the device will start sending data to TTN and TTN Mapper.
 
-
-### TTN Tracker
-
-I also developed [The Things Network Tracker (TTN-Tracker)](https://github.com/kizniche/ttn-tracker), a web app that pulls GPS data from TTN and displays it on a map in real-time (TTN Mapper is not real-time) that can be displayed on your phone, tablet, or computer. This is handy for testing signal range while driving, as you can see location points appearing under your moving location dot on the map (if you grant location sharing permissions to the web app) when a successful transmission has been achieved.
-
-### T-BEAM Board Versions
+### T-BEAM Diagrams
 
 #### Rev0
 

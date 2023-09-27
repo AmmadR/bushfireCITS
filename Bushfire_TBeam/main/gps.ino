@@ -23,7 +23,6 @@
 
 uint32_t LatitudeBinary;
 uint32_t LongitudeBinary;
-uint16_t altitudeGps;
 uint8_t hdopGps;
 uint8_t sats;
 char t[32]; // used to sprintf for Serial output
@@ -41,10 +40,6 @@ float gps_latitude() {
 
 float gps_longitude() {
     return _gps.location.lng();
-}
-
-float gps_altitude() {
-    return _gps.altitude.meters();
 }
 
 float gps_hdop() {
@@ -68,24 +63,26 @@ static void gps_loop() {
 #if defined(PAYLOAD_USE_FULL)
 
     // More data than PAYLOAD_USE_CAYENNE
-    void buildPacket(uint8_t txBuffer[10])
+    void buildPacket(uint8_t txBuffer[17])
     {
         LatitudeBinary = ((_gps.location.lat() + 90) / 180.0) * 16777215;
         LongitudeBinary = ((_gps.location.lng() + 180) / 360.0) * 16777215;
-        altitudeGps = _gps.altitude.meters();
         hdopGps = _gps.hdop.value() / 10;
         sats = _gps.satellites.value();
-
+        
+        // Time, pls work for me
+        char timeStr[9];  // HH:MM:SS format
+        gps_time(timeStr, sizeof(timeStr));
         
         sprintf(t, "Lat: %f", _gps.location.lat());
         Serial.println(t);
         sprintf(t, "Lng: %f", _gps.location.lng());
         Serial.println(t);
-        sprintf(t, "Alt: %d", altitudeGps);
-        Serial.println(t);
         sprintf(t, "Hdop: %d", hdopGps);
         Serial.println(t);
         sprintf(t, "Sats: %d", sats);
+        Serial.println(t);
+        sprintf(t, "Time: %s", timeStr); // Use the formatted time string
         Serial.println(t);
 
         txBuffer[0] = ( LatitudeBinary >> 16 ) & 0xFF;
@@ -94,10 +91,11 @@ static void gps_loop() {
         txBuffer[3] = ( LongitudeBinary >> 16 ) & 0xFF;
         txBuffer[4] = ( LongitudeBinary >> 8 ) & 0xFF;
         txBuffer[5] = LongitudeBinary & 0xFF;
-        txBuffer[6] = ( altitudeGps >> 8 ) & 0xFF;
-        txBuffer[7] = altitudeGps & 0xFF;
-        txBuffer[8] = hdopGps & 0xFF;
-        txBuffer[9] = sats & 0xFF;
+        txBuffer[6] = hdopGps & 0xFF;
+        txBuffer[7] = sats & 0xFF;
+        
+        // Add time information in the payload
+        snprintf((char*)&txBuffer[8], 9, "%s", timeStr);
     }
 
 #elif defined(PAYLOAD_USE_CAYENNE)
@@ -108,12 +106,9 @@ static void gps_loop() {
         sprintf(t, "Lat: %f", _gps.location.lat());
         Serial.println(t);
         sprintf(t, "Lng: %f", _gps.location.lng());
-        Serial.println(t);        
-        sprintf(t, "Alt: %f", _gps.altitude.meters());
-        Serial.println(t);        
+        Serial.println(t);            
         int32_t lat = _gps.location.lat() * 10000;
         int32_t lon = _gps.location.lng() * 10000;
-        int32_t alt = _gps.altitude.meters() * 100;
         
         txBuffer[2] = lat >> 16;
         txBuffer[3] = lat >> 8;
@@ -121,9 +116,6 @@ static void gps_loop() {
         txBuffer[5] = lon >> 16;
         txBuffer[6] = lon >> 8;
         txBuffer[7] = lon;
-        txBuffer[8] = alt >> 16;
-        txBuffer[9] = alt >> 8;
-        txBuffer[10] = alt;
     }
 
 #endif

@@ -56,12 +56,6 @@ static RTC_DATA_ATTR uint32_t count = 0;
     void os_getDevKey (u1_t* buf) { }
 #endif
 
-#ifdef USE_OTAA
-    void os_getArtEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8); }
-    void os_getDevEui (u1_t* buf) { memcpy(buf, DEVEUI, 8); }
-    void os_getDevKey (u1_t* buf) { memcpy_P(buf, APPKEY, 16); }
-#endif
-
 std::vector<void(*)(uint8_t message)> _lmic_callbacks;
 
 // -----------------------------------------------------------------------------
@@ -115,26 +109,6 @@ static void printHex2(unsigned v) {
         Serial.print('0');
     Serial.print(v, HEX);
 }
-
-#ifdef USE_OTAA
-    // generate DevEUI from macaddr if needed
-    void initDevEUI() {
-        bool needInit = true;
-        for(int i = 0; i < sizeof(DEVEUI); i++)
-            if(DEVEUI[i]) needInit = false;
-
-        if(needInit)
-            gen_lora_deveui(DEVEUI);
-
-        Serial.print("DevEUI: ");
-        for(int i = 0; i < sizeof(DEVEUI); i++) {
-            if (i != 0)
-                    Serial.print("-");
-            printHex2(DEVEUI[i]);
-        }
-        Serial.println();
-    }
-#endif
 
 // LMIC library will call this method when an event is fired
 void onEvent(ev_t event) {
@@ -240,10 +214,6 @@ static void initCount() {
 bool ttn_setup() {
     initCount();
 
-    #if defined(USE_OTAA)
-        initDevEUI();
-    #endif
-
     // SPI interface
     SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO, NSS_GPIO);
 
@@ -329,43 +299,6 @@ void ttn_join() {
 
         // Trigger a false joined
         _ttn_callback(EV_JOINED);
-
-    #elif defined(USE_OTAA)
-
-        // Make LMiC initialize the default channels, choose a channel, and
-        // schedule the OTAA join
-        LMIC_startJoining();
-
-        #ifdef SINGLE_CHANNEL_GATEWAY
-            // LMiC will already have decided to send on one of the 3 default
-            // channels; ensure it uses the one we want
-            LMIC.txChnl = SINGLE_CHANNEL_GATEWAY;
-        #endif
-
-        Preferences p;
-        p.begin("lora", true); // we intentionally ignore failure here
-        uint32_t netId = p.getUInt("netId", UINT32_MAX);
-        uint32_t devAddr = p.getUInt("devAddr", UINT32_MAX);
-        uint8_t nwkKey[16], artKey[16];
-        bool keysgood = p.getBytes("nwkKey", nwkKey, sizeof(nwkKey)) == sizeof(nwkKey) && 
-                        p.getBytes("artKey", artKey, sizeof(artKey)) == sizeof(artKey);
-        p.end(); // close our prefs
-
-        if(!keysgood) {
-            // We have not yet joined a network, start a full join attempt
-            // Make LMiC initialize the default channels, choose a channel, and
-            // schedule the OTAA join
-            Serial.println("No session saved, joining from scratch");
-            LMIC_startJoining();
-        }
-        else {
-            Serial.println("Rejoining saved session");
-            LMIC_setSession(netId, devAddr, nwkKey, artKey);
-
-            // Trigger a false joined
-            _ttn_callback(EV_JOINED);
-        }
-
     #endif
 }
 
