@@ -63,13 +63,12 @@ static void gps_loop() {
 #if defined(PAYLOAD_USE_FULL)
 
     // More data than PAYLOAD_USE_CAYENNE
-    void buildPacket(uint8_t txBuffer[17])
+    void buildPacket(uint8_t txBuffer[30])
     {
         LatitudeBinary = ((_gps.location.lat() + 90) / 180.0) * 16777215;
         LongitudeBinary = ((_gps.location.lng() + 180) / 360.0) * 16777215;
         hdopGps = _gps.hdop.value() / 10;
         sats = _gps.satellites.value();
-        
         // Time, pls work for me
         char timeStr[9];  // HH:MM:SS format
         gps_time(timeStr, sizeof(timeStr));
@@ -88,12 +87,13 @@ static void gps_loop() {
         txBuffer[0] = ( LatitudeBinary >> 16 ) & 0xFF;
         txBuffer[1] = ( LatitudeBinary >> 8 ) & 0xFF;
         txBuffer[2] = LatitudeBinary & 0xFF;
+
         txBuffer[3] = ( LongitudeBinary >> 16 ) & 0xFF;
         txBuffer[4] = ( LongitudeBinary >> 8 ) & 0xFF;
         txBuffer[5] = LongitudeBinary & 0xFF;
+        
         txBuffer[6] = hdopGps & 0xFF;
         txBuffer[7] = sats & 0xFF;
-        
         // Add time information in the payload
         snprintf((char*)&txBuffer[8], 9, "%s", timeStr);
     }

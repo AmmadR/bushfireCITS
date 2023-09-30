@@ -26,7 +26,11 @@
 #include <TinyGPS++.h>
 #include <Wire.h>
 
+#include <SPI.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 #include "axp20x.h"
+
 AXP20X_Class axp;
 bool pmu_irq = false;
 String baChStatus = "No charging";
@@ -37,7 +41,7 @@ bool packetSent, packetQueued;
 
 #if defined(PAYLOAD_USE_FULL)
     // includes number of satellites and accuracy
-    static uint8_t txBuffer[17];
+    static uint8_t txBuffer[30];
 #elif defined(PAYLOAD_USE_CAYENNE)
     // CAYENNE DF
     static uint8_t txBuffer[11] = {0x03, 0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -47,12 +51,18 @@ bool packetSent, packetQueued;
 RTC_DATA_ATTR int bootCount = 0;
 esp_sleep_source_t wakeCause;  // the reason we booted this time
 
+
+// BEM 280
+Adafruit_BME280 bme; 
+
+
+
 // -----------------------------------------------------------------------------
 // Application
 // -----------------------------------------------------------------------------
 
 void buildPacket(uint8_t txBuffer[]);
-
+void readSensors(uint8_t txBuffer[]);
 /**
  * If we have a valid position send it to the server.
  * @return true if we decided to send.
@@ -65,7 +75,7 @@ bool trySend() {
     static unsigned long lastSendTime = 0;
     unsigned long currentTime = millis();
 
-    if (currentTime - lastSendTime >= 30000) { // 30 seconds
+    if (currentTime - lastSendTime >= 10000) { // 30 seconds
       lastSendTime = currentTime;
 
       char buffer[40];
@@ -96,6 +106,9 @@ bool trySend() {
       #endif
 
       packetQueued = true;
+      // 
+      readSensors(txBuffer);
+
       ttn_send(txBuffer, sizeof(txBuffer), LORAWAN_PORT, confirmed);
       return true;
       }
@@ -352,6 +365,15 @@ void setup()
         ttn_join();
         ttn_adr(LORAWAN_ADR);
     }
+
+  // Sensors setting - START
+  unsigned status;
+  // BME280
+  status = bme.begin(); 
+   if (!status) {
+        Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
+   }
+  // sensors setting - END
 }
 
 void loop() {
@@ -395,7 +417,7 @@ void loop() {
     // Send every SEND_INTERVAL millis
     static uint32_t last = 0;
     static bool first = true;
-    if (0 == last || millis() - last > SEND_INTERVAL) {
+    // if (0 == last || millis() - last > SEND_INTERVAL) {
         if (trySend()) {
             last = millis();
             first = false;
@@ -417,5 +439,5 @@ void loop() {
             // i.e. don't just keep spinning in loop as fast as we can.
             delay(100);
         }
-    }
+    // }
 }
