@@ -54,8 +54,8 @@ esp_sleep_source_t wakeCause;  // the reason we booted this time
 
 // BEM 280
 Adafruit_BME280 bme; 
-
-
+// Device health check
+#define DEF_LED_HEALTH 33
 
 // -----------------------------------------------------------------------------
 // Application
@@ -326,6 +326,9 @@ void initDeepSleep() {
 
 void setup()
 {
+
+  pinMode(DEF_LED_HEALTH, OUTPUT);
+
     // Debug
     #ifdef DEBUG_PORT
         DEBUG_PORT.begin(SERIAL_BAUD);
@@ -354,7 +357,7 @@ void setup()
     // TTN setup
     if (!ttn_setup()) {
         Serial.println("[ERR] Radio module not found!\n");
-
+        
         if (REQUIRE_RADIO) {
             delay(MESSAGE_TO_SLEEP_DELAY);
             sleep_forever();
@@ -372,6 +375,11 @@ void setup()
   status = bme.begin(); 
    if (!status) {
         Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
+   } else {
+    digitalWrite(DEF_LED_HEALTH, LOW);
+    delay(200);
+    digitalWrite(DEF_LED_HEALTH, HIGH);
+    delay(200);
    }
   // sensors setting - END
 }

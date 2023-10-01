@@ -4,16 +4,16 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
-#define DEF_PIN_NUM_CO 15
-#define DEF_PIN_NUM_NO2 4
+#define DEF_PIN_NUM_CO 4
+#define DEF_PIN_NUM_NO2 15
 
 // FIXME take measure resistors
 const int resValue_0 = 10000;  // Value of 10kOhm resistor !change this to match your resistor
 const int resValue_1 = 10000;  // Value of 10kOhm resistor !change this to match your resistor
 
-const float Vref = 1.1;  //This is the voltage of the internal reference
-long int cOff_0 = 2300; //286mV offset due to resistor ladder. Try taking the average of a long
-long int cOff_1 = 2100; //286mV offset due to resistor ladder. Try taking the average of a long
+const float Vref = 3.3;  //This is the voltage of the internal reference
+long int cOff_CO = 2175; //286mV offset due to resistor ladder. Try taking the average of a long
+long int cOff_NO2 = 2193; //286mV offset due to resistor ladder. Try taking the average of a long
 
 //measurement of the counts without a sensor in place. This should give a good Zero.
 
@@ -42,6 +42,9 @@ void calibration(){
     sensorValue_1 = analogRead(DEF_PIN_NUM_NO2) + sensorValue_1;        
 
     delay(3);   // needs 2 ms for the analog-to-digital converter to settle after the last reading
+    Serial.print("Calibration: ");
+    Serial.print(calibNum-i);
+    Serial.println(" lefts");
   }
   Serial.println("Calibration is ended");
   
@@ -52,16 +55,16 @@ void calibration(){
   zeroRefValue_1 = sensorValue_1/calibNum;  
 
   //Serial.println(zeroRefValue_0);  
-  cOff_0 = zeroRefValue_0;  
-  cOff_1 = zeroRefValue_1;  
+  cOff_CO = zeroRefValue_0;  
+  cOff_NO2 = zeroRefValue_1;  
 
 }
 
 void readSensors(uint8_t txBuffer[30]) {
-  // if (bFlagCalib == 0){
-  //   calibration();
-  //   bFlagCalib = 1;
-  // }
+  if (bFlagCalib == 0){
+    calibration();
+    bFlagCalib = 1;
+  }
   char t[32]; // used to sprintf for Serial output
   //analogReference(EXTERNAL);
 
@@ -78,16 +81,19 @@ void readSensors(uint8_t txBuffer[30]) {
 
   // Accumulate sensor values
 
+  Serial.println(sensorValueCO );
+  Serial.println(sensorValueNO2);
 
-  sensorValueCO  = sensorValueCO /extraBit - cOff_0; //subtract the offset of the resistor ladder * 256.
-  sensorValueNO2 = sensorValueNO2/extraBit - cOff_1; //subtract the offset of the resistor ladder * 256.
+  Serial.println("---------------");
+  sensorValueCO  = sensorValueCO  - cOff_CO  * extraBit; //subtract the offset of the resistor ladder * 256.
+  sensorValueNO2 = sensorValueNO2 - cOff_NO2 * extraBit; //subtract the offset of the resistor ladder * 256.
 
-  Serial.println(sensorValueCO /extraBit);
-  Serial.println(sensorValueNO2/extraBit);
+  Serial.println(cOff_CO * extraBit);
+  Serial.println(cOff_NO2* extraBit);
 
   //  Get sensor values
-  float valCO  = ((float) sensorValueCO  / 1024 * Vref / resValue_0 * 1000000000) / sensitivityCO * 1000;
-  float valNO2 = ((float) sensorValueNO2 / 1024 * Vref / resValue_1 * 1000000000) / sensitivityNO2 * 1000;
+  float valCO  = ((float) sensorValueCO  / extraBit / 4096 * Vref / resValue_0 * 1000000000) / sensitivityCO * 1000;
+  float valNO2 = ((float) sensorValueNO2 / extraBit / 4096 * Vref / resValue_1 * 1000000000) / sensitivityNO2 * 1000;
   float valTemp = bme.readTemperature() * 100;
   float valHumd = bme.readHumidity() * 100;
   float valPres = bme.readPressure() / 100.0F * 100;
