@@ -92,8 +92,8 @@ void readSensors(uint8_t txBuffer[30]) {
   Serial.println(cOff_NO2* extraBit);
 
   //  Get sensor values
-  float valCO  = ((float) sensorValueCO  / extraBit / 4096 * Vref / resValue_0 * 1000000000) / sensitivityCO * 1000;
-  float valNO2 = ((float) sensorValueNO2 / extraBit / 4096 * Vref / resValue_1 * 1000000000) / sensitivityNO2 * 1000;
+  float valCO  = abs(((float) sensorValueCO  / extraBit / 4096 * Vref / resValue_0 * 1000000000) / sensitivityCO * 1000);
+  float valNO2 = abs(((float) sensorValueNO2 / extraBit / 4096 * Vref / resValue_1 * 1000000000) / sensitivityNO2 * 1000);
   float valTemp = bme.readTemperature() * 100;
   float valHumd = bme.readHumidity() * 100;
   float valPres = bme.readPressure() / 100.0F * 100;
