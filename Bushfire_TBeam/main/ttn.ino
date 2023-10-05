@@ -161,7 +161,7 @@ void onEvent(ev_t event) {
         }
         break; }
     case EV_TXCOMPLETE:
-        Serial.println(F("EV_TXCOMPLETE (inc. RX win. wait)"));
+        // Serial.println(F("EV_TXCOMPLETE (inc. RX win. wait)"));
         if (LMIC.txrxFlags & TXRX_ACK) {
             Serial.println(F("Received ack"));
             _ttn_callback(EV_ACK);

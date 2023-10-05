@@ -54,8 +54,9 @@ esp_sleep_source_t wakeCause;  // the reason we booted this time
 
 // BEM 280
 Adafruit_BME280 bme; 
-
-
+// Device health check
+#define DEF_LED_HEALTH 33
+#define DEF_LED_POWER 25
 
 // -----------------------------------------------------------------------------
 // Application
@@ -75,7 +76,7 @@ bool trySend() {
     static unsigned long lastSendTime = 0;
     unsigned long currentTime = millis();
 
-    if (currentTime - lastSendTime >= 10000) { // 30 seconds
+    if (currentTime - lastSendTime >= 5000) { // 30 seconds
       lastSendTime = currentTime;
 
       char buffer[40];
@@ -94,7 +95,7 @@ bool trySend() {
         */
 
       } else {
-        Serial.println("INVALID COORDINATES SEND");
+        // Serial.println("INVALID COORDINATES SEND");
       }
         buildPacket(txBuffer);
 
@@ -110,6 +111,10 @@ bool trySend() {
       readSensors(txBuffer);
 
       ttn_send(txBuffer, sizeof(txBuffer), LORAWAN_PORT, confirmed);
+      digitalWrite(DEF_LED_HEALTH, LOW);
+      delay(200);
+      digitalWrite(DEF_LED_HEALTH, HIGH);
+      delay(200);
       return true;
       }
     else {
@@ -186,17 +191,17 @@ void callback(uint8_t message) {
             Serial.println("Joined TTN!\n");
         }
     }
-    if (EV_JOIN_FAILED == message) Serial.println("TTN join failed\n");
-    if (EV_REJOIN_FAILED == message) Serial.println("TTN rejoin failed\n");
-    if (EV_RESET == message) Serial.println("Reset TTN connection\n");
-    if (EV_LINK_DEAD == message) Serial.println("TTN link dead\n");
-    if (EV_ACK == message) Serial.println("ACK received\n");
-    if (EV_PENDING == message) Serial.println("Message discarded\n");
-    if (EV_QUEUED == message) Serial.println("Message queued\n");
+    // if (EV_JOIN_FAILED == message) Serial.println("TTN join failed\n");
+    // if (EV_REJOIN_FAILED == message) Serial.println("TTN rejoin failed\n");
+    // if (EV_RESET == message) Serial.println("Reset TTN connection\n");
+    // if (EV_LINK_DEAD == message) Serial.println("TTN link dead\n");
+    // if (EV_ACK == message) Serial.println("ACK received\n");
+    // if (EV_PENDING == message) Serial.println("Message discarded\n");
+    // if (EV_QUEUED == message) Serial.println("Message queued\n");
 
     // We only want to say 'packetSent' for our packets (not packets needed for joining)
     if (EV_TXCOMPLETE == message && packetQueued) {
-        Serial.println("Message sent\n");
+        // Serial.println("Message sent\n");
         packetQueued = false;
         packetSent = true;
     }
@@ -326,6 +331,8 @@ void initDeepSleep() {
 
 void setup()
 {
+    pinMode(DEF_LED_HEALTH, OUTPUT);
+    pinMode(DEF_LED_POWER, OUTPUT);
     // Debug
     #ifdef DEBUG_PORT
         DEBUG_PORT.begin(SERIAL_BAUD);
@@ -354,7 +361,7 @@ void setup()
     // TTN setup
     if (!ttn_setup()) {
         Serial.println("[ERR] Radio module not found!\n");
-
+        
         if (REQUIRE_RADIO) {
             delay(MESSAGE_TO_SLEEP_DELAY);
             sleep_forever();
@@ -372,11 +379,17 @@ void setup()
   status = bme.begin(); 
    if (!status) {
         Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
+   } else {
+    digitalWrite(DEF_LED_HEALTH, LOW);
+    delay(200);
+    digitalWrite(DEF_LED_HEALTH, HIGH);
+    delay(200);
    }
   // sensors setting - END
 }
 
 void loop() {
+    digitalWrite(DEF_LED_POWER,HIGH);
     gps_loop();
     ttn_loop();
 
@@ -421,7 +434,7 @@ void loop() {
         if (trySend()) {
             last = millis();
             first = false;
-            Serial.println("TRANSMITTED");
+            // Serial.println("TRANSMITTED");
         }
         else {
             if (first) {

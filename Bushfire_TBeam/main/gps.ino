@@ -73,11 +73,10 @@ static void gps_loop() {
         char timeStr[9];  // HH:MM:SS format
         gps_time(timeStr, sizeof(timeStr));
         
+        // Debug
         sprintf(t, "Lat: %f", _gps.location.lat());
         Serial.println(t);
         sprintf(t, "Lng: %f", _gps.location.lng());
-        Serial.println(t);
-        sprintf(t, "Hdop: %d", hdopGps);
         Serial.println(t);
         sprintf(t, "Sats: %d", sats);
         Serial.println(t);
