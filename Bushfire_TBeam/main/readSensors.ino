@@ -45,8 +45,8 @@ void readSensors(uint8_t txBuffer[30]) {
       delay(3);   // needs 2 ms for the analog-to-digital converter to settle after the last reading
   }
 
-  Serial.print("CO :");Serial.println(analogRead(DEF_PIN_NUM_CO));
-  Serial.print("NO2:");Serial.println(analogRead(DEF_PIN_NUM_NO2));
+  // Serial.print("CO :");Serial.println(analogRead(DEF_PIN_NUM_CO));
+  // Serial.print("NO2:");Serial.println(analogRead(DEF_PIN_NUM_NO2));
 
   float calcVoltage = analogRead(DEF_PIN_NUM_DUST)*(5.0/1024);
   float dustDensity = 0.17*calcVoltage-0.1;
