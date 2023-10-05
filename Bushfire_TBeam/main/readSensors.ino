@@ -26,7 +26,7 @@ const float sensitivityNO2 = 27.03; // NO2 -27.03
 //this is roughly about 1/2 the sensitivity of the barcode on the sensor. Try finding a known
 //concentration of CO to measure, or just approximate.
 
-const int extraBit = 512; //Number of samples averaged, like adding 8 bits to ADC
+const int extraBit = 256; //Number of samples averaged, like adding 8 bits to ADC
 
 long int sensorValueCO = 0;        // value read from the sensor
 long int sensorValueNO2 = 0;        // value read from the sensor
@@ -56,7 +56,10 @@ void readSensors(uint8_t txBuffer[30]) {
 
   sensorValueCO  = sensorValueCO  - cOff_CO  * extraBit; //subtract the offset of the resistor ladder * 256.
   sensorValueNO2 = sensorValueNO2 - cOff_NO2 * extraBit; //subtract the offset of the resistor ladder * 256.
-
+  
+  // Serial.print("[Acc]CO :");Serial.println(sensorValueCO);
+  // Serial.print("[Acc]NO2:");Serial.println(sensorValueNO2);
+  
   //  Get sensor values
   float valCO  = (((float)sensorValueCO  / (float)extraBit / 2096.0f * Vref / (float)resValue_0 * 1000000000.f) / sensitivityCO ) * 1000.f;
   if (valCO < 0) valCO = 0; 
