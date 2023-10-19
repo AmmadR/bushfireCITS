@@ -51,6 +51,8 @@ bool packetSent, packetQueued;
 RTC_DATA_ATTR int bootCount = 0;
 esp_sleep_source_t wakeCause;  // the reason we booted this time
 
+// Time interval
+int g_nTimeinterval = 5000;
 
 // BEM 280
 Adafruit_BME280 bme; 
@@ -75,14 +77,21 @@ bool trySend() {
     // Add a timer mechanism to send data every 30 seconds
     static unsigned long lastSendTime = 0;
     unsigned long currentTime = millis();
+    
+    // int inputTimeInterval = Serial.parseInt();
+    // if (g_nTimeinterval<inputTimeInterval && inputTimeInterval < g_nTimeinterval * 100){
+    //   inputTimeInterval = inputTimeInterval;
+    // } else {
+    //   inputTimeInterval = g_nTimeinterval;
+    // }
 
-    if (currentTime - lastSendTime >= 5000) { // 30 seconds
+    if (currentTime - lastSendTime >= g_nTimeinterval) { // initValue = 5sec.
       lastSendTime = currentTime;
 
       char buffer[40];
 
       if (0 < gps_hdop() && gps_hdop() < 50) {
-        Serial.println("VALID COORDINATES SEND");  
+        // Serial.println("VALID COORDINATES SEND");  
         
         /* Not really needed since when constructing the packet, the data is printed out to the serial monitor anyway
            
@@ -388,7 +397,75 @@ void setup()
   // sensors setting - END
 }
 
+bool g_bIsSleep = false;
+
+
+void SleepOrNot()
+{
+  String str = Serial.readString();
+  Serial.println(str);
+
+  if (str == "Wake")
+  {
+    Serial.print("Let's wake up");
+    Serial.println(str);
+    g_bIsSleep = false;
+  }
+  else if (str == "Sleep")
+  {
+    Serial.print("Sleep now.");
+    Serial.println(str);
+    g_bIsSleep = true;
+  }
+}
+
 void loop() {
+ // SleepOrNot();
+  if (Serial.available()) 
+  { 
+    byte buffer[4]; 
+    int receivedData = Serial.readBytes(buffer, 4);  
+    if (receivedData > 0) { 
+      buffer[receivedData] = '\0'; // Null-terminate the string
+      int intValue = atoi((char*)buffer); // Convert the buffer to an integer
+
+      Serial.println("---------------------------------");
+      Serial.print("Input Data (Decimal): ");
+      Serial.println(intValue);
+      Serial.println("---------------------------------");
+    
+      if (intValue == 0)
+      {
+        Serial.println("Let's wake up");
+        g_bIsSleep = false;
+      }
+      else if  (intValue == 1)
+      {
+        Serial.println("Sleep now.");
+        g_bIsSleep = true;
+      } 
+      else if (intValue >=5 && intValue <= 3600)
+      {
+        Serial.print("Received period: ");
+        Serial.print(intValue);
+        Serial.println(" [sec]");
+        Serial.println("---------------------------------");
+
+        g_nTimeinterval = intValue * 1000;
+      }
+      else
+      {    
+        Serial.println("Input format ERROR");
+      }
+    }
+  }
+  
+  if (g_bIsSleep) 
+  {
+    Serial.print("I'm sleeping now. Don't bother me.\n");
+  } 
+  else 
+  {    
     digitalWrite(DEF_LED_POWER,HIGH);
     gps_loop();
     ttn_loop();
@@ -451,6 +528,6 @@ void loop() {
             // No GPS lock yet, let the OS put the main CPU in low power mode for 100ms (or until another interrupt comes in)
             // i.e. don't just keep spinning in loop as fast as we can.
             delay(100);
-        }
-    // }
+        } 
+  }
 }
