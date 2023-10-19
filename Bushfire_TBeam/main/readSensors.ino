@@ -14,8 +14,8 @@ const int resValue_0 = 9640;  // Value of 10kOhm resistor !change this to match 
 const int resValue_1 = 9450;  // Value of 10kOhm resistor !change this to match your resistor
 
 const float Vref = 1.788;  //This is the voltage of the internal reference
-long int cOff_CO = 945; 
-long int cOff_NO2 = 950;
+long int cOff_CO = 946; 
+long int cOff_NO2 = 946;
 
 //measurement of the counts without a sensor in place. This should give a good Zero.
 
@@ -26,7 +26,7 @@ const float sensitivityNO2 = 27.03; // NO2 -27.03
 //this is roughly about 1/2 the sensitivity of the barcode on the sensor. Try finding a known
 //concentration of CO to measure, or just approximate.
 
-const int extraBit = 256; //Number of samples averaged, like adding 8 bits to ADC
+const int extraBit = 512; //Number of samples averaged, like adding 8 bits to ADC
 
 long int sensorValueCO = 0;        // value read from the sensor
 long int sensorValueNO2 = 0;        // value read from the sensor
@@ -45,8 +45,8 @@ void readSensors(uint8_t txBuffer[30]) {
       delay(3);   // needs 2 ms for the analog-to-digital converter to settle after the last reading
   }
 
-  // Serial.print("CO :");Serial.println(analogRead(DEF_PIN_NUM_CO));
-  // Serial.print("NO2:");Serial.println(analogRead(DEF_PIN_NUM_NO2));
+  Serial.print("CO :");Serial.println(analogRead(DEF_PIN_NUM_CO));
+  Serial.print("NO2:");Serial.println(analogRead(DEF_PIN_NUM_NO2));
 
   float calcVoltage = analogRead(DEF_PIN_NUM_DUST)*(5.0/1024);
   float dustDensity = 0.17*calcVoltage-0.1;
@@ -61,10 +61,13 @@ void readSensors(uint8_t txBuffer[30]) {
   // Serial.print("[Acc]NO2:");Serial.println(sensorValueNO2);
   
   //  Get sensor values
+  // CO  : 10 ppm
   float valCO  = (((float)sensorValueCO  / (float)extraBit / 2096.0f * Vref / (float)resValue_0 * 1000000000.f) / sensitivityCO ) * 1000.f;
   if (valCO < 0) valCO = 0; 
+  // NO2 : 0.1 ppm
   float valNO2 = (((float)sensorValueNO2 / (float)extraBit / 2096.0f * Vref / (float)resValue_1 * 1000000000.f) / sensitivityNO2) * 1000.f;
   if (valNO2 < 0) valNO2 = 0;
+
   float valTemp = bme.readTemperature() * 100;
   float valHumd = bme.readHumidity() * 100;
   float valPres = bme.readPressure() / 100.0F * 100;
