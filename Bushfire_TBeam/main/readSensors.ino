@@ -57,14 +57,9 @@ void readSensors(uint8_t txBuffer[30]) {
   sensorValueCO  = sensorValueCO  - cOff_CO  * extraBit; //subtract the offset of the resistor ladder * 256.
   sensorValueNO2 = sensorValueNO2 - cOff_NO2 * extraBit; //subtract the offset of the resistor ladder * 256.
   
-  // Serial.print("[Acc]CO :");Serial.println(sensorValueCO);
-  // Serial.print("[Acc]NO2:");Serial.println(sensorValueNO2);
-  
   //  Get sensor values
-  // CO  : 10 ppm
   float valCO  = (((float)sensorValueCO  / (float)extraBit / 2096.0f * Vref / (float)resValue_0 * 1000000000.f) / sensitivityCO ) * 1000.f;
   if (valCO < 0) valCO = 0; 
-  // NO2 : 0.1 ppm
   float valNO2 = (((float)sensorValueNO2 / (float)extraBit / 2096.0f * Vref / (float)resValue_1 * 1000000000.f) / sensitivityNO2) * 1000.f;
   if (valNO2 < 0) valNO2 = 0;
 
